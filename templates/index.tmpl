@@ -1,15 +1,52 @@
 <html>
+<head>
+<style>
+table {
+  font-family: arial, sans-serif;
+  border-collapse: collapse;
+  width: 100%;
+}
+
+td, th {
+  border: 1px solid #dddddd;
+  text-align: left;
+  padding: 8px;
+}
+
+tr:nth-child(even) {
+  background-color: #dddddd;
+}
+</style>
+</head>
+<body>
   <h1>Go Url</h1>
-<form action="/new" method="post">
-  Short Name:<br>
-  <input type="text" name="shortname" value="">
+  <form action="/new" method="post">
+    Short Name:<br>
+    <input type="text" name="shortname" value="">
+    <br>
+    Url:<br>
+    <input type="text" name="url" value="">
+    <br><br>
+    Param Url (Add %s to a url to interpolate into):<br>
+    <input type="text" name="param_url" value="">
+    <br><br>
+    <input type="submit" value="Submit">
+  </form>
   <br>
-  Url:<br>
-  <input type="text" name="url" value="">
-  <br><br>
-  Param Url (Add %s to a url to interpolate into):<br>
-  <input type="text" name="param_url" value="">
-  <br><br>
-  <input type="submit" value="Submit">
-</form>
+  <h2>Urls</h2>
+  <table>
+    <tr>
+      <td>Short Name</td>
+      <td>Url</td>
+      <td>Param Url</td>
+    </tr>
+    {{ range .shortUrls }}
+      <tr>
+        <td>{{ .ShortName }}</td>
+        <td><a href="{{ .Url }}">{{ .Url}}</a></td>
+        <td>{{ .ParamUrl }}</td>
+      </tr>
+    {{ end }}
+  </table>
+  </body>
 </html>

@@ -19,7 +19,7 @@ type Model struct {
 type ShortUrl struct {
 	Model
 	ShortName string `json:"short_name"`
-	Url       string `json:"url"`
+	Url       string `gorm:"index:url" json:"url"`
 	ParamUrl  string `json:"param_url"`
 }
 
@@ -28,7 +28,11 @@ func setupRouter(db *gorm.DB) *gin.Engine {
 	r.LoadHTMLGlob("templates/*")
 
 	r.GET("/", func(c *gin.Context) {
-		c.HTML(http.StatusOK, "index.tmpl", gin.H{})
+		var shortUrls []ShortUrl
+		if err := db.Find(&shortUrls).Error; err != nil {
+			fmt.Println("Unable to find all short urls")
+		}
+		c.HTML(http.StatusOK, "index.tmpl", gin.H{"shortUrls": shortUrls})
 	})
 
 	r.GET("/:shortname", func(c *gin.Context) {
@@ -79,7 +83,7 @@ func setupRouter(db *gorm.DB) *gin.Engine {
 			if err := db.Create(&shortUrl).Error; err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			} else {
-				c.JSON(http.StatusOK, shortUrl)
+				c.Redirect(http.StatusFound, "/")
 			}
 		}
 	})
