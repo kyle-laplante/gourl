@@ -17,18 +17,38 @@ tr:nth-child(even) {
   background-color: #dddddd;
 }
 </style>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
 </head>
 <body>
+<script>
+$(document).ready(function() {
+  $(".deleteButton").click(function() {
+    var shortname = $(this).attr("name");
+    if (confirm("Do you really want to delete " + shortname + "?")) {
+      var request = $.ajax({
+        method: "DELETE",
+        url: "/" + shortname,
+      });
+      request.done(function( msg ) {
+        location.reload();
+      });
+      request.fail(function( jqXHR, textStatus ) {
+        alert( "Request failed: " + textStatus );
+      });
+    }
+  });
+});
+</script>
   <h1>Go Url</h1>
-  <form action="/new" method="post">
+  <form action="/" method="post">
     Short Name:<br>
     <input type="text" name="shortname" value="">
     <br>
     Url:<br>
-    <input type="text" name="url" value="">
+    <input type="text" name="url" value="" size=120>
     <br><br>
-    Param Url (Add %s to a url to interpolate into):<br>
-    <input type="text" name="param_url" value="">
+    Param Url (Add %s to a url to interpolate a parameter into):<br>
+    <input type="text" name="param_url" value="" size=120>
     <br><br>
     <input type="submit" value="Submit">
   </form>
@@ -39,12 +59,14 @@ tr:nth-child(even) {
       <td>Short Name</td>
       <td>Url</td>
       <td>Param Url</td>
+      <td>Actions</td>
     </tr>
     {{ range .shortUrls }}
       <tr>
         <td>{{ .ShortName }}</td>
         <td><a href="{{ .Url }}">{{ .Url}}</a></td>
         <td>{{ .ParamUrl }}</td>
+        <td><button type="button" class="deleteButton" name="{{ .ShortName }}">Delete</button></td>
       </tr>
     {{ end }}
   </table>

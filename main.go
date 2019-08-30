@@ -1,13 +1,14 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm"
-	_ "github.com/jinzhu/gorm/dialects/mysql"
+	_ "github.com/jinzhu/gorm/dialects/postgres"
 )
 
 type Model struct {
@@ -18,8 +19,8 @@ type Model struct {
 
 type ShortUrl struct {
 	Model
-	ShortName string `json:"short_name"`
-	Url       string `gorm:"index:url" json:"url"`
+	ShortName string `gorm:"unique;not null" json:"short_name"`
+	Url       string `gorm:"index:url;not null" json:"url"`
 	ParamUrl  string `json:"param_url"`
 }
 
@@ -33,6 +34,24 @@ func setupRouter(db *gorm.DB) *gin.Engine {
 			fmt.Println("Unable to find all short urls")
 		}
 		c.HTML(http.StatusOK, "index.tmpl", gin.H{"shortUrls": shortUrls})
+	})
+
+	r.POST("/", func(c *gin.Context) {
+		shortname := c.PostForm("shortname")
+		var shortUrl ShortUrl
+		if db.Where(&ShortUrl{ShortName: shortname}).First(&shortUrl).RecordNotFound() == false {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "this shortname already exists"})
+		} else {
+			url := c.PostForm("url")
+			paramUrl := c.PostForm("param_url")
+			fmt.Println(fmt.Sprintf("Creating new shorturl %s=%s and %s", shortname, url, paramUrl))
+			shortUrl := ShortUrl{ShortName: shortname, Url: url, ParamUrl: paramUrl}
+			if err := db.Create(&shortUrl).Error; err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			} else {
+				c.Redirect(http.StatusFound, "/")
+			}
+		}
 	})
 
 	r.GET("/:shortname", func(c *gin.Context) {
@@ -70,20 +89,16 @@ func setupRouter(db *gorm.DB) *gin.Engine {
 		}
 	})
 
-	r.POST("/new", func(c *gin.Context) {
-		shortname := c.PostForm("shortname")
+	r.DELETE("/:shortname", func(c *gin.Context) {
+		shortname := c.Params.ByName("shortname")
 		var shortUrl ShortUrl
-		if db.Where(&ShortUrl{ShortName: shortname}).First(&shortUrl).RecordNotFound() == false {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "this shortname already exists"})
+		if err := db.Where(&ShortUrl{ShortName: shortname}).First(&shortUrl).Error; err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		} else {
-			url := c.PostForm("url")
-			paramUrl := c.PostForm("param_url")
-			fmt.Println(fmt.Sprintf("Creating new shorturl %s=%s and %s", shortname, url, paramUrl))
-			shortUrl := ShortUrl{ShortName: shortname, Url: url, ParamUrl: paramUrl}
-			if err := db.Create(&shortUrl).Error; err != nil {
+			if err := db.Unscoped().Delete(&shortUrl).Error; err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			} else {
-				c.Redirect(http.StatusFound, "/")
+				c.JSON(http.StatusOK, gin.H{"deleted": shortname})
 			}
 		}
 	})
@@ -96,7 +111,9 @@ func migrate(db *gorm.DB) error {
 }
 
 func main() {
-	db, err := gorm.Open("mysql", "gourl:gourl@tcp(localhost:3306)/gourl?charset=utf8&parseTime=True&loc=Local")
+	port := flag.Int("port", 80, "the http port to serve on")
+	flag.Parse()
+	db, err := gorm.Open("postgres", "host=localhost port=5432 user=gourl dbname=gourl password=gourl sslmode=disable")
 	if err != nil {
 		panic(fmt.Sprintf("Unable to connect to db: %s", err.Error()))
 	}
@@ -106,5 +123,5 @@ func main() {
 	}
 	r := setupRouter(db)
 	// Listen and Server in 0.0.0.0:8080
-	r.Run(":80")
+	r.Run(fmt.Sprintf(":%d", *port))
 }
