@@ -112,8 +112,13 @@ func migrate(db *gorm.DB) error {
 
 func main() {
 	port := flag.Int("port", 80, "the http port to serve on")
+	dbHost := flag.String("dbHost", "localhost", "The database hostname")
+	dbUser := flag.String("dbUser", "gourl", "The database user name")
+	dbPass := flag.String("dbPass", "gourl", "The password for the database")
 	flag.Parse()
-	db, err := gorm.Open("postgres", "host=localhost port=5432 user=gourl dbname=gourl password=gourl sslmode=disable")
+	cxnString := fmt.Sprintf("host=%s port=5432 user=%s dbname=gourl password=%s sslmode=disable",
+		*dbHost, *dbUser, *dbPass)
+	db, err := gorm.Open("postgres", cxnString)
 	if err != nil {
 		panic(fmt.Sprintf("Unable to connect to db: %s", err.Error()))
 	}
